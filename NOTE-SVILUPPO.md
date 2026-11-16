@@ -8,7 +8,7 @@
 |---|---|---|
 | Fascia con ponytail | Una riga per plugin: le righe arrivano come `["spiegatore-test", "ponytail"]` e sono visibili entrambe nella tab Code (confermato a vista). `await next(e)` non serve: `AbovePrompt` risponde alla riga del proprio plugin. Terminale: da verificare con la mod vera (il CLI non si autenticava). | Fascia `AbovePrompt`, niente ripiego su `$.ui.status` |
 | Cache di `$.model.complete` | Prefisso di circa 34k caratteri marcato `cache: true`: la 1ª chiamata ha `cache_creation_input_tokens` 15.203, la 2ª ha `cache_read_input_tokens` 15.203 | Parti stabili (prompt di sistema, MAPPA, DECISIONI) marcate cache |
-| Stima dei token | Circa 34k caratteri sono stati circa 15,2k token, quindi ≈ 2,2 caratteri per token (testo italiano con numeri), non 4 | Il budget usa ≈ 3 caratteri per token e si tara su `usage` |
+| Stima dei token | Circa 34k caratteri sono stati circa 15,2k token, quindi ≈ 2,2 caratteri per token (testo italiano con numeri), non 4 | Il budget usa ≈ 3 caratteri per token e si tara su `usage` (poi 2: con 3 la stima era bassa del 42%, vedi `hooks/contesto.ts`) |
 | `maxTokens` | Con un tetto di 30 sono stati contati 75 e 102 token in uscita (ragionamento interno) | Selettore di file con `effort: "low"` |
 | Contesto di Opus con comando `{}` | I messaggi API restano gli stessi, ma ogni `/spiega-test` aggiunge circa 420 caratteri: record del comando (circa 170) più la riga `local-command-caveat` (circa 260) | Le domande passano dall'`Input` del pannello (contesto zero) |
 | `{ drop }` su `prompt.submit` | Nessun effetto sul record dei comandi locali (circa 420 caratteri come prima) | Scartato |
