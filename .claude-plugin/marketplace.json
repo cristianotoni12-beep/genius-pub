@@ -1,0 +1,13 @@
+{
+  "name": "genius-pub",
+  "description": "Marketplace locale del plugin Genius Pub.",
+  "owner": {
+    "name": "Cristiano"
+  },
+  "plugins": [
+    {
+      "name": "genius-pub",
+      "source": "./"
+    }
+  ]
+}
