@@ -1,4 +1,4 @@
-<!-- mappa: commit=bdb7da2 · generata=2026-11-16T22:47:18+0100 · aggiornata=2026-11-16T22:47:18+0100 -->
+<!-- mappa: commit=29d63ab · generata=2026-11-16T22:47:18+0100 · aggiornata=2026-11-16T23:06:27+01:00 -->
 # Mappa di Genius Pub
 Plugin per Claude Code (TypeScript/TSX, `claude plugin`, tree-sitter via uv) che tiene una mappa del progetto e un registro delle decisioni e le spiega da un pannello in sola lettura; i dati stanno in `docs/mappa/`, `docs/DECISIONI.md` e nello `$.store` del plugin.
 
@@ -43,7 +43,9 @@ Verifiche senza token del plugin, di `contesto.ts`, di `struttura.py` e dell'hoo
 Manifest, marketplace locale, config TypeScript e note di sviluppo.
 | File | Ruolo |
 |---|---|
-| `.claude-plugin/plugin.json` | manifest (nome, versione, tipi) |
+| `.claude-plugin/plugin.json` | manifest (nome, versione, tipi, licenza) |
+| `LICENSE` | licenza MIT del repo |
+| `README.md` | presentazione, requisiti, installazione, verifiche |
 | `.claude-plugin/marketplace.json` | catalogo locale con un solo plugin |
 | `tsconfig.json` | estende `.claude-plugin/types/tsconfig.json` (non in git) |
 | `.gitignore` | esclusioni del repo |

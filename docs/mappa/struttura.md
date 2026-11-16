@@ -5,6 +5,7 @@
 
 ### (radice)
 - `.gitignore`
+- `LICENSE`
 - `NOTE-SVILUPPO.md` (documentazione) → titoli: Note di sviluppo (per il resoconto finale), Fase 0 — risultati (2026-11-15, Claude Code desktop 2.1.325…, Ambiente, Fonti
 - `tsconfig.json` (config) → chiavi: extends · estende: ./.claude-plugin/types/tsconfig.json
 

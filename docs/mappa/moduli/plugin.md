@@ -3,7 +3,7 @@ Dice a Claude Code cos'è il plugin (nome, versione, tipi), come si registra in 
 
 File: elenco in `docs/mappa/MAPPA.md`.
 
-Simboli principali: `name` .claude-plugin/plugin.json:2, `version` :3, `types` :6 (`./types/index.d.ts`); `plugins[0].name` .claude-plugin/marketplace.json:9, `source` :10; `extends` tsconfig.json:2 → `.claude-plugin/types/tsconfig.json` (generato, non in git; `typeRoots` :16-18, `include` :25-29); `.gitignore:3` esclude `diario/`.
+Simboli principali: `name` .claude-plugin/plugin.json:2, `version` :3, `types` :8 (`./types/index.d.ts`), `license` :9 (MIT, testo in `LICENSE`); `plugins[0].name` .claude-plugin/marketplace.json:9, `source` :10; `extends` tsconfig.json:2 → `.claude-plugin/types/tsconfig.json` (generato, non in git; `typeRoots` :16-18, `include` :25-29); `.gitignore:3` esclude `diario/`.
 Convenzioni:
 - il manifest non elenca skill né hook: li trova per convenzione (`hooks/hooks.json`, `skills/`);
 - il commit di rilascio si chiama «Genius Pub X.Y.Z»; non ci sono tag;

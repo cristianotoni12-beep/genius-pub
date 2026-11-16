@@ -7,7 +7,7 @@ Simboli principali: `motore` tests/genius-pub.test.tsx:66-165 (mondo finto), `RO
 Convenzioni:
 - opzioni di `motore` (tipo :68-78): `mappa`, `env`, `chiamate`, `guasto`, `serve`, `spawn`, `store`, `attesa`;
 - ogni bottone di `Pane` ha una `key` unica (register.tsx:592-827): i test premono per `key`;
-- test principali: percorsi sicuri :167, file toccati :194, ordine e tagli :204, pannello per superficie :242, archivio :305, ripiego :366, fascia :393, widget :412, errore del modello :440, figlio spiega :471, figlio mappa :478, sessione principale :501; struttura: determinismo :141, segreti :158, `--solo` :203, budget :233; hook (`tests/post-commit.test.sh`): doc-only :33, prompt e flag :46-53, lucchetto :56, merge :70, PATH minimo :78.
+- test principali: percorsi sicuri :167, file toccati :194, ordine e tagli :204, pannello per superficie :242, archivio :305, ripiego :366, fascia :393, widget :412, errore del modello :440, figlio spiega :471, figlio mappa :478, sessione principale :501; struttura: determinismo :141, segreti :158, `--solo` :203, budget :233; hook (`tests/post-commit.test.sh`): doc-only :33, prompt e flag :46-53, lucchetto :56, merge :70, PATH minimo :78, blocco dell'hook: versione più recente :94, cartella installata sparita :96, cartella di sviluppo :98.
 Flusso interno: `motore` risponde con dati fissi a ogni evento (`session.start`, `process.run`, `fs.read`, `model.complete`, `process.spawn`, `tool.call`); `claude` e `uv` dell'hook sono finti.
 Dipendenze esterne: `GENIUS_PUB_CHILD`, `GENIUS_PUB_RUOLO` (via `opzioni.env`); runtime `claude-code/testing` (dal Claude Code installato); `uv`, `git`.
 
