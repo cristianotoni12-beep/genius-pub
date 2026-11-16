@@ -1,7 +1,10 @@
 {
   "name": "genius-pub",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Mappa del progetto, registro delle decisioni e uno spiegatore in sola lettura che risponde senza toccare il contesto della sessione principale.",
-  "author": { "name": "Cristiano" },
-  "types": "./types/index.d.ts"
+  "author": {
+    "name": "Cristiano"
+  },
+  "types": "./types/index.d.ts",
+  "license": "MIT"
 }

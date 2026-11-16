@@ -172,14 +172,16 @@ Se il prompt dice che sei nel **processo dell'hook post-commit**: niente domande
 ## Hook post-commit: `installa-hook`
 
 1. Destinazione: `git rev-parse --git-path hooks/post-commit`, che rispetta `core.hooksPath`.
-2. Il blocco da installare. Chiama lo script del plugin invece di copiarlo, così gli aggiornamenti del plugin valgono subito:
+2. Il blocco da installare. Chiama lo script del plugin invece di copiarlo, così gli aggiornamenti del plugin valgono subito. Installato da un marketplace, il plugin sta in una cartella con la versione nel nome (`…/plugins/cache/<marketplace>/genius-pub/<versione>/`) che cambia a ogni aggiornamento: il blocco sceglie la versione più recente ogni volta che parte.
    ```
    # >>> genius-pub >>>
-   [ -f 'PLUGIN/scripts/post-commit.sh' ] && sh 'PLUGIN/scripts/post-commit.sh'
+   GENIUS_PUB_DIR='PLUGIN'
+   case "$GENIUS_PUB_DIR" in */plugins/cache/*) N=$(ls -d "${GENIUS_PUB_DIR%/*}"/*/ 2>/dev/null | sort -V | tail -1); [ -n "$N" ] && GENIUS_PUB_DIR=${N%/} ;; esac
+   [ -f "$GENIUS_PUB_DIR/scripts/post-commit.sh" ] && sh "$GENIUS_PUB_DIR/scripts/post-commit.sh"
    # <<< genius-pub <<<
    ```
    (`PLUGIN` va sostituito con il percorso assoluto reale, `cd PLUGIN && pwd -P`, non con un link simbolico che può sparire. Gli hook valgono per tutti i worktree del repository: dove manca `docs/mappa/MAPPA.md` non fanno nulla.)
-3. Se l'hook esiste e contiene già `# >>> genius-pub >>>`, dì che è installato e fermati.
+3. Se l'hook contiene già `# >>> genius-pub >>>`: se il blocco è uguale a quello sopra, dì che è installato e fermati; se è diverso (una versione precedente), sostituisci solo le righe tra `# >>> genius-pub >>>` e `# <<< genius-pub <<<` e dillo.
 4. Se l'hook esiste con altro contenuto, mostralo e **chiedi conferma**, poi aggiungi il blocco **in fondo**. Mai sovrascrivere.
 5. Se non esiste, crealo con `#!/bin/sh` seguito dal blocco.
 6. `chmod +x` sull'hook.

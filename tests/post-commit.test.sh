@@ -87,4 +87,13 @@ sleep 1
 grep -q '^CHIAMATA child=1 ruolo=mappa' "$REGISTRO" && ok "claude trovato in ~/.local/bin senza ~/.zshrc" || ko "claude non trovato con il PATH minimo"
 grep -q '^/genius-pub:map aggiorna src/b.ts src/c.ts src/d.ts src/e.ts' "$REGISTRO" && grep -qF -- '--solo src/b.ts src/c.ts src/d.ts src/e.ts' "$REGISTRO_UV" && ok "recuperati i file cambiati dall'ultima mappa" || ko "file saltati non recuperati"
 sleep 2
+# Il blocco che installa-hook scrive (preso da SKILL.md): da un marketplace sceglie la versione più recente.
+blocco() { awk '/# >>> genius-pub >>>/{f=1} f{sub(/^   /,""); print} /# <<< genius-pub <<</{exit}' "$PLUGIN/skills/map/SKILL.md" | sed "s|='PLUGIN'|='$1'|"; }
+CACHE="$TMP/plugins/cache/genius-pub/genius-pub"
+for v in 0.3.0 0.10.0 0.9.1; do mkdir -p "$CACHE/$v/scripts" && echo "echo $v" >"$CACHE/$v/scripts/post-commit.sh"; done
+[ "$(blocco "$CACHE/0.3.0" | sh)" = 0.10.0 ] && ok "hook: dal marketplace parte la versione più recente" || ko "hook: versione vecchia"
+rm -rf "$CACHE/0.3.0"
+[ "$(blocco "$CACHE/0.3.0" | sh)" = 0.10.0 ] && ok "hook: la cartella installata è sparita, parte quella nuova" || ko "hook: muto dopo l'aggiornamento"
+mkdir -p "$TMP/sviluppo/scripts" && echo "echo sviluppo" >"$TMP/sviluppo/scripts/post-commit.sh"
+[ "$(blocco "$TMP/sviluppo" | sh)" = sviluppo ] && ok "hook: da una cartella di sviluppo parte quella" || ko "hook: cartella di sviluppo ignorata"
 echo "tutti i controlli passati"
