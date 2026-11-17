@@ -1,13 +1,19 @@
 {
   "name": "genius-pub",
-  "description": "Marketplace locale del plugin Genius Pub.",
+  "description": "Marketplace del plugin Genius Pub: una versione per macOS e una per Windows.",
   "owner": {
     "name": "Cristiano"
   },
   "plugins": [
     {
       "name": "genius-pub",
-      "source": "./"
+      "description": "Genius Pub per macOS.",
+      "source": "./plugins/genius-pub"
+    },
+    {
+      "name": "genius-pub-windows",
+      "description": "Genius Pub per Windows.",
+      "source": "./plugins/genius-pub-windows"
     }
   ]
 }

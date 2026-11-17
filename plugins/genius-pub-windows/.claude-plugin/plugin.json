@@ -1,0 +1,10 @@
+{
+  "name": "genius-pub-windows",
+  "version": "0.4.0",
+  "description": "Per Windows. Mappa del progetto, registro delle decisioni e uno spiegatore in sola lettura che risponde senza toccare il contesto della sessione principale.",
+  "author": {
+    "name": "Cristiano"
+  },
+  "types": "./types/index.d.ts",
+  "license": "MIT"
+}

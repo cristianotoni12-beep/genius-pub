@@ -1,6 +1,6 @@
 ---
 name: map
-description: Genera o aggiorna docs/mappa/, la mappa del progetto che Genius Pub usa per rispondere: un indice essenziale (MAPPA.md, moduli e loro file) e documenti per modulo e per tema (punti di rottura, comandi, flussi). Usala per «/map», «/mappa», «mappa del progetto», «aggiorna la mappa», e con «installa-hook» per l'hook git post-commit che la tiene aggiornata.
+description: "Genera o aggiorna docs/mappa/, la mappa del progetto che Genius Pub usa per rispondere: un indice essenziale (MAPPA.md, moduli e loro file) e documenti per modulo e per tema (punti di rottura, comandi, flussi). Usala per «/map», «/mappa», «mappa del progetto», «aggiorna la mappa», e con «installa-hook» per l'hook git post-commit che la tiene aggiornata."
 argument-hint: "[aggiorna [file…] | installa-hook]"
 ---
 <!--
@@ -12,7 +12,7 @@ da Get Shit Done (https://github.com/gsd-build/get-shit-done, agents/gsd-codebas
 templates/codebase/CONCERNS.md, licenza MIT).
 -->
 
-# /genius-pub:map: la mappa del progetto per Genius Pub
+# /genius-pub-windows:map: la mappa del progetto per Genius Pub
 
 `PLUGIN` è la cartella del plugin: due livelli sopra la «Base directory» di questa skill (`<base>/../..`). Lo script strutturale si lancia così: `uv run --script PLUGIN/scripts/struttura.py`. Tutti i comandi partono dalla radice del repository (`git rev-parse --show-toplevel`).
 
@@ -48,7 +48,7 @@ Non c'è un tetto di lunghezza: la mappa cresce con il progetto. Conta la densit
 
 ### Passo 1: controlla
 - Se non è un repository git, fermati e dillo.
-- Se `docs/mappa/MAPPA.md` esiste già, proponi `/genius-pub:map aggiorna` e fermati, a meno che l'utente chieda esplicitamente di rigenerare.
+- Se `docs/mappa/MAPPA.md` esiste già, proponi `/genius-pub-windows:map aggiorna` e fermati, a meno che l'utente chieda esplicitamente di rigenerare.
 - Se esiste la vecchia mappa in un file solo, `docs/MAPPA.md`, proponi di **dividerla** invece di rigenerarla: costa molto meno perché non si rilegge il codice. Con il sì dell'utente, salta i passi 2 e 3. Lancia `uv run --script PLUGIN/scripts/struttura.py --root .`, poi un subagente `model: sonnet` che legge `docs/MAPPA.md` e scrive la cartella nel formato del passo 4, spostando ogni sezione nel documento giusto senza inventare nulla. Cancella `docs/MAPPA.md` solo dopo un secondo sì dell'utente, quando ha visto la cartella.
 - Se `docs/DECISIONI.md` manca, crealo con queste due righe:
   ```
@@ -139,7 +139,7 @@ Dipendenze esterne: …              (servizi, database, variabili d'ambiente: s
 ### Passo 5: mostra e lascia il commit all'utente
 - `rm -rf "$NOTE"`.
 - Mostra: i documenti scritti, quanti moduli e quanti punti di rottura, `git status --short docs/` e i token consumati, se li conosci.
-- **Non fare commit.** Ricorda all'utente che lo fa lui, e che `/genius-pub:map installa-hook` tiene aggiornata la mappa dopo ogni commit.
+- **Non fare commit.** Ricorda all'utente che lo fa lui, e che `/genius-pub-windows:map installa-hook` tiene aggiornata la mappa dopo ogni commit.
 
 ---
 
@@ -147,7 +147,7 @@ Dipendenze esterne: …              (servizi, database, variabili d'ambiente: s
 
 Se il prompt dice che sei nel **processo dell'hook post-commit**: niente domande all'utente, niente commit, e nessun subagente tranne quello Sonnet del punto 6. Lì non hai Bash: lo script dell'hook ha già fatto i passi con git e ti dà nel prompt i file completi (passo 2), il diff (passo 5), il commit e la data (passo 7); il passo 3 l'ha già lanciato lui.
 
-1. Leggi l'intestazione di `docs/mappa/MAPPA.md` e prendi `commit=<hash>`. Se l'indice non esiste: con la vecchia `docs/MAPPA.md` proponi la divisione (Generazione completa, passo 1), altrimenti proponi `/genius-pub:map`; poi fermati. Nel processo dell'hook fermati e basta.
+1. Leggi l'intestazione di `docs/mappa/MAPPA.md` e prendi `commit=<hash>`. Se l'indice non esiste: con la vecchia `docs/MAPPA.md` proponi la divisione (Generazione completa, passo 1), altrimenti proponi `/genius-pub-windows:map`; poi fermati. Nel processo dell'hook fermati e basta.
 2. File da considerare: gli argomenti **più** `git diff --name-only <hash>..HEAD` (così si recupera anche quello che un aggiornamento precedente ha saltato). Togli tutto ciò che sta in `docs/mappa/` e `docs/DECISIONI.md`. Se non resta nulla, aggiorna solo `aggiornata=` e fermati.
 3. `uv run --script PLUGIN/scripts/struttura.py --root . --solo <file…>`: aggiorna le righe di `struttura.md`.
 4. Per ogni file trova, nelle tabelle di `## Moduli` dell'indice, il modulo che lo elenca e quindi il suo documento. Il cambiamento è **strutturale** se:
@@ -172,7 +172,7 @@ Se il prompt dice che sei nel **processo dell'hook post-commit**: niente domande
 ## Hook post-commit: `installa-hook`
 
 1. Destinazione: `git rev-parse --git-path hooks/post-commit`, che rispetta `core.hooksPath`.
-2. Il blocco da installare. Chiama lo script del plugin invece di copiarlo, così gli aggiornamenti del plugin valgono subito. Installato da un marketplace, il plugin sta in una cartella con la versione nel nome (`…/plugins/cache/<marketplace>/genius-pub/<versione>/`) che cambia a ogni aggiornamento: il blocco sceglie la versione più recente ogni volta che parte.
+2. Il blocco da installare. Chiama lo script del plugin invece di copiarlo, così gli aggiornamenti del plugin valgono subito. Installato da un marketplace, il plugin sta in una cartella con la versione nel nome (`…/plugins/cache/<marketplace>/genius-pub-windows/<versione>/`) che cambia a ogni aggiornamento: il blocco sceglie la versione più recente ogni volta che parte.
    ```
    # >>> genius-pub >>>
    GENIUS_PUB_DIR='PLUGIN'
