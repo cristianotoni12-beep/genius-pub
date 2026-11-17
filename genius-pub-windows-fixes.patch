@@ -1,0 +1,337 @@
+From df23ad7f955bc7c3c4291bfb097385bad8fb5445 Mon Sep 17 00:00:00 2001
+From: Windows fixes <noreply@localhost>
+Date: Tue, 17 Nov 2026 11:41:36 +0100
+Subject: [PATCH] Windows: path handling in the read-only guard and the panel,
+ test portability
+
+- skills/map/SKILL.md: quote the description; its unquoted ": " made the
+  frontmatter invalid YAML, so the skill loaded with no metadata.
+- hooks/contesto.ts: barre(), relativoA(), percorsoDentro() handle C:\ paths
+  (backslashes are separators, drive letter and case ignored) only on Windows;
+  POSIX paths are unchanged. eSegreto() splits on / and \ so C:\repo\.env
+  stays a secret.
+- hooks/register.tsx: the mappa-role write guard and leggiScelti() use those
+  helpers. On Windows the guard denied every write to docs/mappa/ and the
+  panel read 0 files, because git gives C:/... and the engine C:\....
+- tests: fs mock compares paths in test form; new unit test for Windows paths;
+  test_struttura.py decodes output as UTF-8 and removes read-only git objects.
+- scripts/struttura.py: stderr in UTF-8 too; git output decoded as UTF-8.
+- docs/DECISIONI.md: one line for the Windows-only normalisation.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ docs/DECISIONI.md         |  1 +
+ hooks/contesto.ts         | 41 +++++++++++++++++++++++++++++++++++++--
+ hooks/register.tsx        | 24 ++++++++++-------------
+ scripts/struttura.py      |  5 ++++-
+ skills/map/SKILL.md       |  2 +-
+ tests/genius-pub.test.tsx | 40 +++++++++++++++++++++++++++++++++-----
+ tests/test_struttura.py   | 15 +++++++++++---
+ 7 files changed, 102 insertions(+), 26 deletions(-)
+
+diff --git a/docs/DECISIONI.md b/docs/DECISIONI.md
+index ec17902..1a0a4f1 100644
+--- a/docs/DECISIONI.md
++++ b/docs/DECISIONI.md
+@@ -11,3 +11,4 @@
+ - 2026-11-16 · hook post-commit · lo script prepara file, diff, commit e data e il figlio non ha Bash, invece di lasciare git a Haiku · Haiku componeva comandi con `&&` e `;` che la guardia rifiutava, e saltava i file · scripts/post-commit.sh, hooks/register.tsx
+ - 2026-11-16 · archivio · conversazioni nello store del plugin invece che nel progetto · resta fuori dal repository, quindi la sola lettura vale anche qui; ultime 50 conversazioni per progetto · hooks/contesto.ts, hooks/register.tsx
+ - 2026-11-16 · interfaccia · pannello in inglese con risposte nella lingua della domanda invece di tutto in italiano · il plugin va pubblicato; chi scrive in un'altra lingua riceve risposte nella sua · hooks/register.tsx, prompts/spiegatore.md, prompts/guasto.md
++- 2026-11-17 · percorsi Windows · `\` diventa `/` (e l'unità maiuscola) solo per i percorsi Windows, `C:\…`, invece che sempre · su macOS e Linux `\` è un carattere del nome: `docs/x\..\mappa/y` è un file fuori da docs/mappa/ che, normalizzato, la guardia lascerebbe scrivere · hooks/contesto.ts, hooks/register.tsx
+diff --git a/hooks/contesto.ts b/hooks/contesto.ts
+index 5a537d6..1801590 100644
+--- a/hooks/contesto.ts
++++ b/hooks/contesto.ts
+@@ -21,9 +21,44 @@ export const SERVE_ESPLORARE = '[[SERVE-ESPLORAZIONE]]'
+ // Misurati su Chef-moi: 2,07-2,2 caratteri per token (mappa italiana piena di percorsi). Con /3 la stima era bassa del 42%.
+ export const stimaToken = (s: string) => Math.ceil(s.length / 2)
+ 
++// Percorsi su Windows: `C:\…` o `C:/…`. Lì `\` separa le cartelle e le maiuscole non contano.
++// Su macOS e Linux `\` è un carattere del nome: si lascia com'è, o la guardia di docs/mappa/ avrebbe un varco.
++export const eWindows = (p: string) => /^[A-Za-z]:[\\/]/.test(p)
++
++// Su Windows: barre in avanti e unità maiuscola (`c:\a\b` → `C:/a/b`). Altrove il percorso resta uguale.
++export function barre(p: string, windows = eWindows(p)) {
++  if (!windows) return p
++  const q = p.replace(/\\/g, '/')
++  return /^[a-z]:/.test(q) ? q.charAt(0).toUpperCase() + q.slice(1) : q
++}
++
++// `p` relativo a `base` se ci sta dentro, altrimenti undefined. Su Windows senza badare a barre e maiuscole.
++export function relativoA(p: string, base: string): string | undefined {
++  const w = eWindows(base) || eWindows(p)
++  const a = barre(p, w)
++  const prefisso = `${barre(base, w).replace(/\/$/, '')}/`
++  const dentro = w ? a.toLowerCase().startsWith(prefisso.toLowerCase()) : a.startsWith(prefisso)
++  return dentro && a.length > prefisso.length ? a.slice(prefisso.length) : undefined
++}
++
++// Percorso assoluto e senza `.` né `..`, risolto da `cwd` se relativo. Non segue i link simbolici.
++export function percorsoDentro(cwd: string, fp: string) {
++  const w = eWindows(cwd) || eWindows(fp)
++  const f = barre(fp, w)
++  const pieno = f.startsWith('/') || eWindows(f) ? f : `${barre(cwd, w)}/${f}`
++  const unita = eWindows(pieno) ? pieno.slice(0, 2) : ''
++  const parti: string[] = []
++  for (const p of pieno.slice(unita.length).split('/')) {
++    if (p === '..') parti.pop()
++    else if (p !== '' && p !== '.') parti.push(p)
++  }
++  return `${unita}/${parti.join('/')}`
++}
++
+ // Mai aprire segreti: .env e varianti (non .env.example), chiavi e certificati.
++// Il nome si prende dopo l'ultima `/` o `\`: su Windows `C:\repo\.env` resta un segreto.
+ export function eSegreto(percorso: string): boolean {
+-  const nome = percorso.split('/').pop() ?? ''
++  const nome = percorso.split(/[\\/]/).pop() ?? ''
+   if (nome === '.env.example') return false
+   return nome === '.env' || nome.startsWith('.env.') || /\.(pem|key)$/.test(nome)
+ }
+@@ -63,13 +98,15 @@ export function fileToccati(
+   max = MAX_TOCCATI,
+ ): string[] {
+   const visti = new Set<string>()
++  const w = eWindows(root)
+   for (let i = messaggi.length - 1; i >= 0 && visti.size < max; i--) {
+     const usi = messaggi[i]?.toolUses ?? []
+     for (let j = usi.length - 1; j >= 0 && visti.size < max; j--) {
+       const input = usi[j]?.input ?? {}
+       const fp = input.file_path ?? input.notebook_path
+       if (typeof fp !== 'string') continue
+-      const rel = fp.startsWith(`${root}/`) ? fp.slice(root.length + 1) : fp.startsWith('/') ? '' : fp
++      const f = barre(fp, w)
++      const rel = relativoA(f, root) ?? (f.startsWith('/') || eWindows(f) ? '' : f)
+       if (rel && !rel.split('/').includes('..') && !eSegreto(rel)) visti.add(rel)
+     }
+   }
+diff --git a/hooks/register.tsx b/hooks/register.tsx
+index a3da1c6..0770c77 100644
+--- a/hooks/register.tsx
++++ b/hooks/register.tsx
+@@ -6,6 +6,7 @@ import type { Livello, Modo, Risposta, Scheda, StatoMappa, Uso } from '../types'
+ import {
+   archivia,
+   assembla,
++  barre,
+   BUDGET,
+   CARTELLA,
+   comeArchivio,
+@@ -18,6 +19,8 @@ import {
+   MAX_DIFF_CHAR,
+   MAX_FILE_CHAR,
+   migliaia,
++  percorsoDentro,
++  relativoA,
+   righeTurni,
+   sceltaSicura,
+   SERVE_ESPLORARE,
+@@ -240,7 +243,8 @@ async function leggiScelti($: EngineInterface, root: string, rootReale: string,
+   const letti: { file: string; testo: string }[] = []
+   for (const f of percorsi) {
+     const reale = (await $.fs.stat(`${root}/${f}`, { resolve: true }).catch(() => undefined))?.realPath
+-    if (!reale || !reale.startsWith(`${rootReale}/`) || eSegreto(reale)) continue
++    // relativoA, non startsWith: su Windows git dà `C:/…` e il file system `C:\…`.
++    if (!reale || relativoA(reale, rootReale) === undefined || eSegreto(reale)) continue
+     const testo = await leggi($, reale)
+     if (testo !== undefined) letti.push({ file: f, testo: testo.slice(0, MAX_FILE_CHAR) })
+   }
+@@ -476,22 +480,14 @@ async function nuovoArgomento($: EngineInterface) {
+   await update($, ridotta, () => false)
+ }
+ 
+-function percorsoDentro(cwd: string, fp: string) {
+-  const parti: string[] = []
+-  for (const p of (fp.startsWith('/') ? fp : `${cwd}/${fp}`).split('/')) {
+-    if (p === '..') parti.pop()
+-    else if (p !== '' && p !== '.') parti.push(p)
+-  }
+-  return `/${parti.join('/')}`
+-}
+-
+ // Percorso reale anche di un file che non esiste ancora: si risolve l'antenato più vicino che esiste.
++// `p` viene da percorsoDentro (barre in avanti anche su Windows); ci si ferma alla radice, `/` o `C:`.
+ async function percorsoReale($: EngineInterface, p: string) {
+   const coda: string[] = []
+   let base = p
+-  while (base !== '/') {
++  while (base !== '/' && base.includes('/')) {
+     const reale = (await $.fs.stat(base, { resolve: true }).catch(() => undefined))?.realPath
+-    if (reale) return [reale.replace(/\/$/, ''), ...coda].join('/')
++    if (reale) return [barre(reale).replace(/\/$/, ''), ...coda].join('/')
+     coda.unshift(base.slice(base.lastIndexOf('/') + 1))
+     base = base.slice(0, base.lastIndexOf('/')) || '/'
+   }
+@@ -501,8 +497,8 @@ async function percorsoReale($: EngineInterface, p: string) {
+ // Ruolo `mappa` (hook post-commit): oltre alla lettura, scrive solo dentro docs/mappa/. Niente Bash: la parte con git la fa post-commit.sh.
+ async function eMappa($: EngineInterface, fp: string) {
+   const cwd = await $.session.cwd()
+-  const cartella = await percorsoReale($, `${cwd}/${CARTELLA}`)
+-  return (await percorsoReale($, percorsoDentro(cwd, fp))).startsWith(`${cartella}/`)
++  const cartella = await percorsoReale($, percorsoDentro(cwd, CARTELLA))
++  return relativoA(await percorsoReale($, percorsoDentro(cwd, fp)), cartella) !== undefined
+ }
+ 
+ async function vietato($: EngineInterface, strumento: string, e: Record<string, unknown>) {
+diff --git a/scripts/struttura.py b/scripts/struttura.py
+index fb59f2e..7206515 100644
+--- a/scripts/struttura.py
++++ b/scripts/struttura.py
+@@ -974,8 +974,11 @@ def main(argv=None):
+     g.add_argument("--stampa", action="store_true", help="stampa il blocco, senza scrivere")
+     a = ap.parse_args(argv)
+     sys.stdout.reconfigure(encoding="utf-8")
++    sys.stderr.reconfigure(encoding="utf-8")  # anche gli errori («non è dentro…»): su Windows sarebbero in cp1252
+ 
+-    git = subprocess.run(["git", "-C", a.root, "rev-parse", "--show-toplevel"], capture_output=True, text=True)
++    # git scrive i percorsi in UTF-8 anche su Windows: senza encoding una cartella con lettere accentate si legge male.
++    git = subprocess.run(["git", "-C", a.root, "rev-parse", "--show-toplevel"], capture_output=True, text=True,
++                         encoding="utf-8")
+     if git.returncode != 0:
+         sys.exit(f"struttura.py: {a.root} non è dentro un repository git (l'elenco dei file viene da `git ls-files`).")
+     root = git.stdout.strip()
+diff --git a/skills/map/SKILL.md b/skills/map/SKILL.md
+index c0efd78..d970368 100644
+--- a/skills/map/SKILL.md
++++ b/skills/map/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: map
+-description: Genera o aggiorna docs/mappa/, la mappa del progetto che Genius Pub usa per rispondere: un indice essenziale (MAPPA.md, moduli e loro file) e documenti per modulo e per tema (punti di rottura, comandi, flussi). Usala per «/map», «/mappa», «mappa del progetto», «aggiorna la mappa», e con «installa-hook» per l'hook git post-commit che la tiene aggiornata.
++description: "Genera o aggiorna docs/mappa/, la mappa del progetto che Genius Pub usa per rispondere: un indice essenziale (MAPPA.md, moduli e loro file) e documenti per modulo e per tema (punti di rottura, comandi, flussi). Usala per «/map», «/mappa», «mappa del progetto», «aggiorna la mappa», e con «installa-hook» per l'hook git post-commit che la tiene aggiornata."
+ argument-hint: "[aggiorna [file…] | installa-hook]"
+ ---
+ <!--
+diff --git a/tests/genius-pub.test.tsx b/tests/genius-pub.test.tsx
+index 4a93ef1..20f6343 100644
+--- a/tests/genius-pub.test.tsx
++++ b/tests/genius-pub.test.tsx
+@@ -4,10 +4,13 @@ import { expect, test } from 'claude-code/testing'
+ import {
+   archivia,
+   assembla,
++  barre,
+   eSegreto,
+   fileToccati,
+   MAX_CONVERSAZIONI,
+   percorsiSicuri,
++  percorsoDentro,
++  relativoA,
+   sceltaSicura,
+   SERVE_ESPLORARE,
+   stimaToken,
+@@ -41,6 +44,10 @@ const TRACCIATI = [
+   'docs/mappa/comandi.md',
+ ]
+ 
++// Su Windows il motore passa alle hook del test `/repo/x` come `C:\repo\x`: per le chiavi del finto file system
++// si torna alla forma scritta qui.
++const comeNelTest = (p: string) => p.replace(/\\/g, '/').replace(/^[A-Za-z]:(?=\/)/, '')
++
+ const PANE = {
+   plugin: 'genius-pub',
+   component: 'Pane',
+@@ -126,16 +133,19 @@ function motore(
+     return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+   })
+   on('fs.read', (_, e) => {
++    const p = comeNelTest(e.path)
+     // I prompt del plugin: quello del selettore riconoscibile, gli altri generici.
+-    if (e.path.endsWith('/prompts/selettore-file.md')) return { value: 'Rispondi SOLO con un array JSON' }
+-    if (e.path.includes('/prompts/')) return { value: 'Prompt di sistema di Genius Pub' }
+-    const testo = file[e.path]
++    if (p.endsWith('/prompts/selettore-file.md')) return { value: 'Rispondi SOLO con un array JSON' }
++    if (p.includes('/prompts/')) return { value: 'Prompt di sistema di Genius Pub' }
++    const testo = file[p]
+     if (testo === undefined) throw new Error(`ENOENT ${e.path}`)
+     return { value: testo }
+   })
+   on('fs.stat', (_, e) => {
+-    if (e.path.includes('/nuovo')) throw new Error(`ENOENT ${e.path}`) // cartella che non esiste ancora
+-    const realPath = e.path.replace(`${ROOT}/docs/mappa/fuori`, '/altrove') // link simbolico che esce dal repo
++    const p = comeNelTest(e.path)
++    if (p.includes('/nuovo')) throw new Error(`ENOENT ${e.path}`) // cartella che non esiste ancora
++    // Link simbolico che esce dal repo; gli altri percorsi tornano come li dà il motore (su Windows `C:\repo\…`).
++    const realPath = p.startsWith(`${ROOT}/docs/mappa/fuori`) ? p.replace(`${ROOT}/docs/mappa/fuori`, '/altrove') : e.path
+     return { value: { kind: 'file' as const, size: 1, mtimeMs: 0, isLink: false, realPath } }
+   })
+   on('model.complete', async (_, e) => {
+@@ -201,6 +211,26 @@ test('file toccati di recente: relativi al repo, dal più recente, senza segreti
+   expect(fileToccati(messaggi, '/repo', 1)).toEqual(['src/a.ts'])
+ })
+ 
++// Percorsi Windows nelle funzioni pure: girano su ogni sistema, quindi Windows si prova anche da macOS.
++test('percorsi Windows: barre, maiuscole, segreti, dentro e fuori dal repo', () => {
++  expect(barre('c:\\Users\\x\\proj')).toBe('C:/Users/x/proj')
++  expect(barre('/repo/a\\b')).toBe('/repo/a\\b') // su macOS e Linux `\` fa parte del nome
++  expect(relativoA('C:\\Users\\x\\proj\\src\\a.ts', 'c:/users/x/proj')).toBe('src/a.ts')
++  expect(relativoA('C:/Users/x/proj-falso/a.ts', 'C:/Users/x/proj')).toBeUndefined()
++  expect(relativoA('C:/Users/x/proj', 'C:/Users/x/proj')).toBeUndefined()
++  expect(relativoA('/Repo/a.ts', '/repo')).toBeUndefined() // fuori da Windows le maiuscole contano
++  expect(percorsoDentro('C:\\Users\\x\\proj', 'docs\\mappa\\a.md')).toBe('C:/Users/x/proj/docs/mappa/a.md')
++  expect(percorsoDentro('C:\\Users\\x\\proj', 'docs\\mappa\\..\\..\\src\\a.ts')).toBe('C:/Users/x/proj/src/a.ts')
++  expect(percorsoDentro('C:/p', 'D:\\altro\\a.md')).toBe('D:/altro/a.md')
++  expect(percorsoDentro('/repo', 'docs/x\\..\\mappa/y.md')).toBe('/repo/docs/x\\..\\mappa/y.md') // nessun varco su POSIX
++  expect(eSegreto('C:\\proj\\.env')).toBe(true)
++  expect(eSegreto('C:\\proj\\.env.local')).toBe(true)
++  expect(eSegreto('C:\\proj\\.env.example')).toBe(false)
++  const uso = (file_path: string) => ({ input: { file_path } })
++  const messaggi = [{ toolUses: [uso('C:\\Users\\x\\proj\\src\\a.ts'), uso('D:\\altro\\b.ts'), uso('C:\\Users\\x\\proj\\.env'), uso('src\\c.ts')] }]
++  expect(fileToccati(messaggi, 'C:/Users/x/proj')).toEqual(['src/c.ts', 'src/a.ts'])
++})
++
+ test('il contesto segue l’ordine stabile e taglia prima i file, poi i turni', () => {
+   const base = {
+     sistema: 'S',
+diff --git a/tests/test_struttura.py b/tests/test_struttura.py
+index dd9416b..a17cbb5 100644
+--- a/tests/test_struttura.py
++++ b/tests/test_struttura.py
+@@ -8,7 +8,9 @@
+ """
+ 
+ import json
++import os
+ import shutil
++import stat
+ import subprocess
+ import tempfile
+ import unittest
+@@ -96,7 +98,8 @@ FIXTURE = {
+ 
+ 
+ def git(d, *args):
+-    return subprocess.run(GIT + ["-C", str(d), *args], check=True, capture_output=True, text=True).stdout
++    return subprocess.run(GIT + ["-C", str(d), *args], check=True, capture_output=True, text=True,
++                          encoding="utf-8").stdout
+ 
+ 
+ def crea_repo(base, nome, files):
+@@ -112,8 +115,9 @@ def crea_repo(base, nome, files):
+ 
+ 
+ def lancia(root, *args, check=True):
++    # struttura.py scrive UTF-8: senza encoding, su Windows l'uscita si legge in cp1252 e «→» diventa «â†’».
+     r = subprocess.run(["uv", "run", "--quiet", "--script", str(SCRIPT), "--root", str(root), *args],
+-                       capture_output=True, text=True)
++                       capture_output=True, text=True, encoding="utf-8")
+     if check and r.returncode:
+         raise AssertionError(f"struttura.py {args} → {r.returncode}\n{r.stderr}")
+     return r
+@@ -131,7 +135,12 @@ class TestStruttura(unittest.TestCase):
+ 
+     @classmethod
+     def tearDownClass(cls):
+-        shutil.rmtree(cls.tmp)
++        # Su Windows git lascia gli oggetti in sola lettura e rmtree si ferma: si rende il file scrivibile e si riprova.
++        def scrivibile(funzione, percorso, _errore):
++            os.chmod(percorso, stat.S_IWRITE)
++            funzione(percorso)
++
++        shutil.rmtree(cls.tmp, onexc=scrivibile)
+ 
+     def copia(self, nome):
+         dest = Path(tempfile.mkdtemp(dir=self.tmp)) / nome
+-- 
+2.56.0.windows.4
+
