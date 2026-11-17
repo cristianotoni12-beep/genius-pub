@@ -79,6 +79,7 @@ function motore(
     guasto?: boolean
     serve?: boolean
     spawn?: unknown[]
+    run?: { argv: readonly string[]; cwd?: string; env?: Readonly<Record<string, string>> }[]
     store?: Record<string, unknown>
     // La risposta del modello aspetta questa promessa: serve a simulare una domanda in corso.
     attesa?: Promise<unknown>
@@ -120,8 +121,13 @@ function motore(
   on('ui.close', () => ({ value: undefined }))
   on('command.register', () => ({ value: { command: 'explain' } }))
   on('process.run', (_, e) => {
+    opzioni.run?.push({ argv: e.argv, cwd: e.init?.cwd, env: e.init?.env })
     const args = e.argv.slice(1).join(' ')
-    const stdout = args.startsWith('rev-parse')
+    const stdout = /post-commit\.sh$/.test(e.argv[1] ?? '')
+      ? 'Map updated.\n'
+      : args === '--exec-path'
+        ? 'C:/Program Files/Git/mingw64/libexec/git-core\n'
+        : args.startsWith('rev-parse')
       ? `${ROOT}\n`
       : args.startsWith('ls-files')
         ? TRACCIATI.join('\n')
@@ -436,6 +442,24 @@ test('fascia: un solo pulsante, lo stato della mappa solo se va sistemata', asyn
   expect((await ui.find({ type: 'Button', key: 'apri' }))?.text).toBe('Close')
   await ui.press({ key: 'apri' })
   expect((await ui.find({ type: 'Button', key: 'apri' }))?.text).toBe('Open')
+  await ui.unmount()
+})
+
+test('Update map: lancia lo script dell\'hook in primo piano e ne mostra l\'esito', async ($, on) => {
+  const run: { argv: readonly string[]; cwd?: string; env?: Readonly<Record<string, string>> }[] = []
+  motore(on, { mappa: MAPPA, run })
+  await $.session.start({ cwd: ROOT, surface: 'desktop', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await ui.redraw()
+  expect(await ui.find({ type: 'Text', text: 'map: 1 file changed' })).toBeDefined()
+  await ui.press({ key: 'aggiorna-mappa' })
+  const sh = run.filter(r => /post-commit\.sh$/.test(r.argv[1] ?? ''))
+  expect(sh).toHaveLength(1)
+  expect(sh[0]?.argv[0]).toBe('C:/Program Files/Git/usr/bin/sh.exe') // lo sh di Git for Windows
+  expect(sh[0]?.argv[1]).toMatch(/\/scripts\/post-commit\.sh$/)
+  expect(sh[0]?.cwd).toBe(ROOT)
+  expect(sh[0]?.env).toMatchObject({ GENIUS_PUB_MANUALE: '1' })
+  expect(await ui.find({ type: 'Text', text: 'Map updated.' })).toBeDefined()
   await ui.unmount()
 })
 

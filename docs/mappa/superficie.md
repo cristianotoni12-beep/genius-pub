@@ -2,7 +2,7 @@
 | Cosa | Dove | Protezione |
 |---|---|---|
 | `/explain [bug] <domanda>` | hooks/register.tsx:521, :538-542 | registrato solo se non è un figlio (`leggiRuolo`, :519); la riga entra in trascrizione (~100 token), la risposta no |
-| `/genius-pub:map [aggiorna \| installa-hook]` | skills/map/SKILL.md | `installa-hook` chiede conferma se l'hook esiste (:182-184); non fa commit |
+| `/genius-pub:map [aggiorna \| installa-hook]` (Windows: `/genius-pub-windows:map`) | skills/map/SKILL.md | `installa-hook` chiede conferma se l'hook esiste (:182-184); non fa commit |
 | Fascia `AbovePrompt` | :570-590 | parla solo quando c'è da fare; un solo pulsante Open/Close; stato in atom `aperto` |
 | Pannello `Pane` | :592-827 | sola lettura; ogni bottone ha `key` unica; guardia «occupato» contro domande in parallelo (:344) |
 | Widget (versione ridotta) | :601-616 | solo presentazione |

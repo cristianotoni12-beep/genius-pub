@@ -43,6 +43,8 @@ const aperto = atom({ plugin: 'genius-pub', key: 'aperto' } as const, false)
 const ridotta = atom({ plugin: 'genius-pub', key: 'ridotta' } as const, false)
 // Una domanda arrivata mentre un'altra è in corso: avviso sotto l'Input fino alla fine della risposta.
 const occupato = atom({ plugin: 'genius-pub', key: 'occupato' } as const, false)
+const mappaInCorso = atom({ plugin: 'genius-pub', key: 'mappaInCorso' } as const, false)
+const notaMappa = atom({ plugin: 'genius-pub', key: 'notaMappa' } as const, null)
 
 // Il livello sceglie modello e quanto ragiona; la lunghezza la dice il prompt. Un livello in più è una voce in più qui.
 const MODELLO: Record<Livello, string> = { base: 'haiku', tecnico: 'sonnet' }
@@ -132,6 +134,26 @@ function statoDellaMappa(stato: StatoMappa) {
 async function aggiornaStatoMappa($: EngineInterface) {
   const stato = await calcolaStatoMappa($)
   await update($, statoMappa, () => stato)
+}
+
+// «Update map»: lo stesso lavoro dell'hook post-commit (Haiku, scrive solo in docs/mappa/), ma in primo piano.
+// Lo script stampa una riga sola con l'esito; il modello non passa dal contesto della sessione principale.
+async function aggiornaMappa($: EngineInterface) {
+  const stato = await read($, statoMappa)
+  if (!stato || (await read($, mappaInCorso))) return
+  await update($, mappaInCorso, () => true)
+  await update($, notaMappa, () => null)
+  const nota = await $.process
+    .run(['sh', `${$.plugin.root}/scripts/post-commit.sh`], {
+      cwd: stato.root,
+      env: { GENIUS_PUB_MANUALE: '1' },
+      timeoutMs: 600_000,
+    })
+    .then(r => r.stdout.trim().split('\n').pop() || 'Map update finished.')
+    .catch((err: unknown) => `Map update failed: ${err instanceof Error ? err.message : String(err)}`)
+  await update($, notaMappa, () => nota)
+  await update($, mappaInCorso, () => false)
+  await aggiornaStatoMappa($)
 }
 
 function somma(a: Uso | undefined, r: ModelCompleteResult): Uso {
@@ -717,6 +739,9 @@ export const register: Register = on => {
     const mostraFonti = await read($, fonti)
     const corta = await read($, ridotta)
     const attesa = await read($, occupato)
+    const inCorsoMappa = await read($, mappaInCorso)
+    const esitoMappa = await read($, notaMappa)
+    const testoMappa = stato && statoDellaMappa(stato)
     const fermo = r !== null && !r.inCorso
     const segnaposto =
       r === null
@@ -731,6 +756,14 @@ export const register: Register = on => {
         {testa}
         {stato?.assente && (
           <Text color="warning">No project map: I'll search the files instead, more slowly. Create it with /genius-pub:map.</Text>
+        )}
+        {stato && !stato.assente && (inCorsoMappa || testoMappa || esitoMappa) && (
+          <Box gap={1} flexWrap="wrap">
+            {inCorsoMappa && <Progress label="Updating the map with Haiku…" />}
+            {!inCorsoMappa && testoMappa && <Text color="warning">{testoMappa}</Text>}
+            {!inCorsoMappa && esitoMappa && <Text dimColor>{esitoMappa}</Text>}
+            {!inCorsoMappa && testoMappa && <Button key="aggiorna-mappa" label="Update map" onPress={() => void aggiornaMappa($)} />}
+          </Box>
         )}
         {/* Il tasto non si può togliere (senza etichetta direbbe «submit»): «↵» è la più corta. */}
         <Input key="domanda" placeholder={segnaposto} submitLabel="↵" autoFocus onSubmit={v => void dalCampo($, v)} />

@@ -1,5 +1,5 @@
 # Modulo mappa
-Genera e aggiorna `docs/mappa/`; il post-commit la tiene aggiornata con Haiku, in background.
+Genera e aggiorna `docs/mappa/`; il post-commit la tiene aggiornata con Haiku, in background. Percorsi relativi a `plugins/genius-pub/`; la skill Windows è `/genius-pub-windows:map`.
 
 File: elenco in `docs/mappa/MAPPA.md`.
 

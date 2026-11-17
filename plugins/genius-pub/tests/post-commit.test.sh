@@ -87,6 +87,19 @@ sleep 1
 grep -q '^CHIAMATA child=1 ruolo=mappa' "$REGISTRO" && ok "claude trovato in ~/.local/bin senza ~/.zshrc" || ko "claude non trovato con il PATH minimo"
 grep -q '^/genius-pub:map aggiorna src/b.ts src/c.ts src/d.ts src/e.ts' "$REGISTRO" && grep -qF -- '--solo src/b.ts src/c.ts src/d.ts src/e.ts' "$REGISTRO_UV" && ok "recuperati i file cambiati dall'ultima mappa" || ko "file saltati non recuperati"
 sleep 2
+# 7. Pulsante «Update map» (GENIUS_PUB_MANUALE=1): senza commit nuovo, in primo piano, con una riga d'esito.
+: >"$REGISTRO"
+echo "<!-- mappa: commit=$(git rev-parse --short HEAD) · generata=x · aggiornata=x -->" >docs/mappa/MAPPA.md
+ESITO=$(GENIUS_PUB_MANUALE=1 sh "$PLUGIN/scripts/post-commit.sh")
+[ "$ESITO" = "Nothing to update: commit your changes first." ] && [ ! -s "$REGISTRO" ] && [ ! -d .git/genius-pub-mappa.lock ] \
+  && ok "manuale con la mappa in pari: nessun processo, lo dice" || ko "manuale in pari: «$ESITO»"
+echo "<!-- mappa: commit=$A · generata=x · aggiornata=x -->" >docs/mappa/MAPPA.md
+ESITO=$(GENIUS_PUB_MANUALE=1 sh "$PLUGIN/scripts/post-commit.sh")
+[ "$ESITO" = "Map updated." ] && grep -q '^CHIAMATA child=1 ruolo=mappa' "$REGISTRO" && [ ! -d .git/genius-pub-mappa.lock ] \
+  && ok "manuale: aspetta claude, poi «Map updated.» e lucchetto rilasciato" || ko "manuale: «$ESITO»"
+grep -q '^/genius-pub:map aggiorna src/b.ts src/c.ts src/d.ts src/e.ts' "$REGISTRO" && ok "manuale: file cambiati dall'ultima mappa" || ko "manuale: file sbagliati"
+git checkout -q docs/mappa/MAPPA.md
+
 # Il blocco che installa-hook scrive (preso da SKILL.md): da un marketplace sceglie la versione più recente.
 blocco() { awk '/# >>> genius-pub >>>/{f=1} f{sub(/^   /,""); print} /# <<< genius-pub <<</{exit}' "$PLUGIN/skills/map/SKILL.md" | sed "s|='PLUGIN'|='$1'|"; }
 CACHE="$TMP/plugins/cache/genius-pub/genius-pub"

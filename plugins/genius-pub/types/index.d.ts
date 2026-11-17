@@ -37,6 +37,9 @@ declare module 'claude-code' {
       fonti: boolean
       ridotta: boolean
       occupato: boolean
+      // «Update map»: in corso, e com'è andata l'ultima volta.
+      mappaInCorso: boolean
+      notaMappa: string | null
       // Id di una conversazione, oppure 'decisioni'.
       aperta: string | null
       aperto: boolean
